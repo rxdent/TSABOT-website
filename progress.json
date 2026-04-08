@@ -1,0 +1,100 @@
+{
+    "topics": {
+        "U3-S1": {
+            "correct": 7,
+            "incorrect": 2
+        },
+        "U1-S3": {
+            "correct": 11,
+            "incorrect": 6
+        },
+        "U1-S2": {
+            "correct": 16,
+            "incorrect": 6
+        },
+        "U1-S1": {
+            "correct": 74,
+            "incorrect": 90
+        },
+        "U3-S2": {
+            "correct": 2,
+            "incorrect": 2
+        },
+        "U8-S3": {
+            "correct": 1,
+            "incorrect": 2
+        },
+        "U2-S2": {
+            "correct": 0,
+            "incorrect": 3
+        },
+        "U6-S2": {
+            "correct": 1,
+            "incorrect": 0
+        },
+        "U5-S3": {
+            "correct": 1,
+            "incorrect": 1
+        },
+        "U4-S1": {
+            "correct": 1,
+            "incorrect": 5
+        },
+        "U2-S1": {
+            "correct": 2,
+            "incorrect": 3
+        },
+        "U5-S1": {
+            "correct": 2,
+            "incorrect": 6
+        },
+        "U4-S2": {
+            "correct": 1,
+            "incorrect": 1
+        },
+        "U8-S2": {
+            "correct": 1,
+            "incorrect": 0
+        },
+        "U5-S4": {
+            "correct": 2,
+            "incorrect": 0
+        },
+        "U6-S1": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "U1-S4": {
+            "correct": 5,
+            "incorrect": 11
+        },
+        "U5-S2": {
+            "correct": 2,
+            "incorrect": 0
+        },
+        "U6-S3": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "U5-S5": {
+            "correct": 0,
+            "incorrect": 1
+        }
+    },
+    "weak_topics": [
+        "U1-S1",
+        "U8-S3",
+        "U2-S2",
+        "U3-S2",
+        "U4-S1",
+        "U2-S1",
+        "U5-S1",
+        "U4-S2",
+        "U6-S1",
+        "U1-S4",
+        "U6-S3",
+        "U5-S3",
+        "U5-S5",
+        "U1-S3"
+    ]
+}

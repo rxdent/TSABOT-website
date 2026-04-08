@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TSA BOT - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="navbar">
+    <div class="nav-left">
+        <button class="logo" onclick="goToHome()">🤖 Coding Bot</button>
+    </div>
+    <div class="nav-right">
+        <span class="{{ 'active' if mode == 'home' }} hover-text" onclick="goToHome()">Home</span>
+        
+        <span class="{{ 'active' if mode == 'practice' }} hover-text" onclick="goToPractice()">Practice</span>
+        
+        <span class="{{ 'active' if mode == 'test' }} hover-text" onclick="goToTest()">Test</span>
+        
+        <div class="profile"></div>
+    </div>
+</div>
+
+{% block content %}{% endblock %}
+
+<script src="{{ url_for('static', filename='page1.js') }}"></script>
+
+</body>
+</html>

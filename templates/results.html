@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    {% extends "layout.html" %}
+
+    {% block title %}Home{% endblock %}
+    
+    {% block content %}
+
+<div class="container">
+    {% if mode == "practice" %}
+        <h1>Practice Complete</h1>
+    {% elif mode == "test" %}
+        <h1>Test Complete</h1>
+    {% endif %}
+
+    <h2 class="score-display">{{ score }} / {{ total }} ({{ percentage|round(1) }}%)</h2>
+
+    <div class="results-review">
+        {% for res in results %}
+            {% set is_skipped = res.your_answer is none %}
+            <div class="result-item 
+                {{ 'correct-border' if res.is_correct else ('skipped-border' if is_skipped else 'wrong-border') }}">
+                
+                <div class="result-header">
+                    <span class="status-badge 
+                        {{ 'status-correct' if res.is_correct else ('status-skipped' if is_skipped else 'status-wrong') }}">
+                        {% if res.is_correct %}
+                            ✓ Correct
+                        {% elif is_skipped %}
+                            ○ Incomplete
+                        {% else %}
+                            ✗ Incorrect
+                        {% endif %}
+                    </span>
+                    <h3>Question {{ loop.index }}</h3>
+                </div>
+                
+                <p class="result-text">{{ res.question }}</p>
+
+                <div class="result-options">
+                    {% for opt in res.options %}
+                        {% set letter = ['A','B','C','D'][loop.index0] %}
+                        <div class="result-option-row 
+                            {{ 'highlight-correct' if letter == res.correct_answer }}
+                            {{ 'highlight-wrong' if not is_skipped and letter == res.your_answer and not res.is_correct }}">
+                            <span class="option-letter">{{ letter }}</span>
+                            <span class="option-text">{{ opt }}</span>
+                            
+                            {% if letter == res.correct_answer %}
+                                <span class="indicator-text">(Correct Answer)</span>
+                            {% elif not is_skipped and letter == res.your_answer %}
+                                <span class="indicator-text">(Your Answer)</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if is_skipped %}
+                    <p class="skipped-note">You did not provide an answer for this question.</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="actions">
+        <button class="dir-btn" style="width: 200px; height: 50px; margin: 40px 0;" onclick="goToHome()">Back to Home</button>
+    </div>
+</div>
+{% endblock %}
+<script src="{{ url_for('static', filename='page1.js') }}"></script>
+</body>
+</html>

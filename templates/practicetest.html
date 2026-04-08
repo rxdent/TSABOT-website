@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Practice Mode</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+    
+</head>
+<body>
+
+<div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-message" class="loading-text">Generating next question...</div>
+</div>
+
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h1 style="margin-bottom: 40px;">PRACTICE MODE</h1>
+
+    <div class="options">
+        
+        <div class="selection-container">
+            <label>Complete Curriculum</label>
+            <button class="mode-btn full-test-btn" onclick="triggerLoading('Generating Practice Test...', '/test/start/practice/all')">
+                Start Full Length Test 
+            </button>
+        </div>
+
+        <div class="selection-container">
+            <label> Unit Test </label>
+            <select id="unit-select" class="drop-down">
+                {% for unit in units_data.units %}
+                <option value="{{ unit.id }}">Unit {{ unit.unit }}: {{ unit.title }}</option>
+                {% endfor %}
+            </select>
+            <button class="mode-btn" onclick="triggerLoading('Generating Practice Test...', '/test/start/practice/' + document.getElementById('unit-select').value)">Start Unit Test</button>
+        </div>
+
+        <div class="selection-container">
+            <label> Subunit Test </label>
+            <select id="subunit-select" class="drop-down">
+                {% for unit in units_data.units %}
+                <optgroup label="Unit {{ unit.unit }}">
+                    {% for section in unit.sections %}
+                    <option value="{{ section.id }}">{{ section.section }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+            <button class="mode-btn" onclick="triggerLoading('Generating Practice Test...', '/test/start/practice/' + document.getElementById('subunit-select').value)">Start Subunit Test</button>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+<script>
+    function startUnit() {
+        const unitId = document.getElementById('unit-select').value;
+        window.location.href = "/test/start/practice/" + unitId;
+    }
+    
+    function startSubunit() {
+        const sectionId = document.getElementById('subunit-select').value;
+        window.location.href = "/test/start/practice/" + sectionId;
+    }
+</script>
+
+<script src="{{ url_for('static', filename='page1.js') }}"></script>
+</body>
+</html>

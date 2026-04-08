@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    
+<div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Generating next question...</div>
+</div>
+
+<div class="test-container" data-index="{{ index }}" data-fetched="{{ questions|length }}">
+
+    <div class="question-box">
+        <div class="question-number">
+            Question {{ index + 1 }}
+        </div>
+
+        <div class="question-text">
+            <p>{{ q.question_text }}</p>
+            {% if q.code_snippet %}
+                <pre class="code-snippet"><code>{{ q.code_snippet }}</code></pre>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="/test/answer" onsubmit="handleTestNavigation(event)">
+    
+            <div class="answers">
+                {% for opt in q.options %}
+                    {% set letter = ['A','B','C','D'][loop.index0] %}
+                    <label class="answer-row">
+                        
+                        <!-- 🔴 Disable input after feedback is shown -->
+                        <input 
+                            type="radio" 
+                            name="answer" 
+                            value="{{ letter }}"
+                            {% if selected == letter %}checked{% endif %}
+                            {% if show_feedback %}disabled{% endif %}
+                        >
+                        
+                        <span class="custom-radio">{{ letter }}</span>
+                        <span class="answer-text">{{ opt }}</span>
+        
+                        <!-- 🔴 Highlight correct/wrong AFTER answering -->
+                        {% if show_feedback %}
+                            {% if letter == q.correct_answer %}
+                                <span style="color: #30ca68;">(Correct Answer)</span>
+                            {% elif letter == selected %}
+                                <span style="color: #e95151;">(Your Answer)</span>
+                            {% endif %}
+                        {% endif %}
+        
+                    </label>
+                {% endfor %}
+            </div>
+        
+            <!-- 🔴 FEEDBACK DISPLAY -->
+            {% if show_feedback %}
+                <div class="feedback-box">
+                    {% if is_correct %}
+                        <p style="color: #4ade80;">Correct!</p>
+                    {% else %}
+                        <p style="color: #f87171;">Incorrect.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        
+            <div class="nav-buttons">
+        
+                <!-- 🔴 PRACTICE MODE BUTTON SWITCH -->
+            {% if mode == "practice" %}
+
+                    <!-- Skip question -->
+                    <button type="submit" name="direction" value="back" class="dir-btn">Back</button>
+                    {% if not show_feedback %}
+                    <!-- Submit answer -->
+                    <button type="submit" class="dir-btn">Submit</button>
+                    {% endif %}
+                    <button type="submit" name="direction" value="next" class="dir-btn">Next</button>
+            
+            {% else %}
+                <!-- TEST MODE -->
+                <button type="submit" name="direction" value="back" class="dir-btn">Back</button>
+                <button type="submit" name="direction" value="next" class="dir-btn">Next</button>
+            {% endif %}
+        
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+<script src="{{ url_for('static', filename='page1.js') }}"></script>
+</body>
+</html>

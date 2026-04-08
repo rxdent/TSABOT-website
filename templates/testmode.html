@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Mode</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        /* Internal styling for selection controls to match the theme */
+        .selection-container {
+            background-color: #2c3e50;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+            border: 1px solid #4a5d73;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .selection-container label {
+            display: block;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            background-color: #1f2a3a;
+            color: white;
+            border: 1px solid #4a5d73;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            outline: none;
+        }
+        select:focus {
+            border-color: #7aa2f7;
+        }
+        .mode-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #6c95c3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .mode-btn:hover {
+            background-color: #3a96ff;
+        }
+        .full-test-btn {
+            background: none;
+            border: 2px solid #6c95c3;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-message" class="loading-text">Generating next question...</div>
+</div>
+
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <h1 style="margin-bottom: 40px;">TEST MODE</h1>
+
+    <div class="options">
+        
+        <div class="selection-container">
+            <label>Complete Curriculum</label>
+            <button class="mode-btn full-test-btn" onclick="triggerLoading('Generating Test...', '/test/start/test/all')">
+                Start Full Length Test 
+            </button>
+        </div>
+
+        <div class="selection-container">
+            <label> Unit Test </label>
+            <select class="drop-down" id="unit-select">
+                {% for unit in units_data.units %}
+                <option class="drop-down" value="{{ unit.id }}">Unit {{ unit.unit }}: {{ unit.title }}</option>
+                {% endfor %}
+            </select>
+            <button class="mode-btn" onclick="triggerLoading('Generating Test...', '/test/start/test/' + document.getElementById('unit-select').value)">Start Unit Test</button>
+        </div>
+
+        <div class="selection-container">
+            <label> Subunit Test </label>
+            <select class="drop-down" id="subunit-select">
+                {% for unit in units_data.units %}
+                <optgroup label="Unit {{ unit.unit }}">
+                    {% for section in unit.sections %}
+                    <option value="{{ section.id }}">{{ section.section }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+            <button class="mode-btn" onclick="triggerLoading('Generating Test...', '/test/start/test/' + document.getElementById('subunit-select').value)">Start Subunit Test</button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+<script>
+    function startUnit() {
+        const unitId = document.getElementById('unit-select').value;
+        window.location.href = "/test/start/unit/" + unitId;
+    }
+    
+    function startSubunit() {
+        const sectionId = document.getElementById('subunit-select').value;
+        window.location.href = "/test/start/subunit/" + sectionId;
+    }
+</script>
+
+<script src="{{ url_for('static', filename='page1.js') }}"></script>
+</body>
+</html>

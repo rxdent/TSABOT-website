@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSA BOT - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="hero-section">
+        <h1>TSA BOT</h1>
+        <p class="hero-subtitle">Master your coding curriculum with AI-powered practice and real-time testing.</p>
+    </div>
+
+    <div class="home-grid">
+        <div class="home-card">
+            <div class="card-icon">📖</div>
+            <h2>Study</h2>
+            <p>Review the curriculum units and sharpen your knowledge base.</p>
+            <button class="mode-btn" onclick="location.href='/study'">Open Modules</button>
+        </div>
+
+        <div class="home-card">
+            <div class="card-icon">⚙️</div>
+            <h2>Practice</h2>
+            <p>Flexible drills by unit or subunit. No pressure, just learning.</p>
+            <button class="mode-btn" onclick="goToPractice()">Start Drills</button>
+        </div>
+
+        <div class="home-card">
+            <div class="card-icon">🏆</div>
+            <h2>Test Mode</h2>
+            <p>Simulate the real exam. Timed questions and final scoring.</p>
+            <button class="mode-btn" onclick="goToTest()">Challenge yourself</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="{{ url_for('static', filename='page1.js') }}"></script>
+
+</body>
+</html>
