@@ -35,3 +35,11 @@ function triggerLoading(message, url) {
     document.getElementById('loading-overlay').style.display = 'flex';
     window.location.href = url;
 }
+
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const main = document.getElementById("mainContainer");
+
+    sidebar.classList.toggle("collapsed");
+    main.classList.toggle("full");
+}

@@ -378,3 +378,103 @@ select:focus {
 .home-card .mode-btn {
     margin-top: auto;
 }
+
+
+
+/* -------- SIDEBAR (UPDATED) -------- */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 70px; /* prevents overlap with navbar */
+    height: calc(100% - 70px);
+    width: 220px;
+
+    background-color: #2c3e50; /* matches cards */
+    border-right: 2px solid #4a5d73;
+
+    padding: 15px;
+    overflow-y: auto;
+
+    transition: transform 0.3s ease;
+    z-index: 900;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+.sidebar h3 {
+    color: white;
+    margin-bottom: 15px;
+    font-family: "Gugi", sans-serif;
+}
+
+/* 🔴 ROW LAYOUT INSTEAD OF GRID */
+.question-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Match existing button styling */
+.q-btn {
+    width: 100%;
+    text-align: left;
+
+    background-color: #1e293b;
+    color: #cbd5e1;
+
+    border: 1px solid #4a5d73;
+    border-radius: 8px;
+
+    padding: 10px;
+    cursor: pointer;
+
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.q-btn:hover {
+    background-color: #3a96ff;
+    border-color: #7aa2f7;
+}
+
+.q-btn.active {
+    background-color: #6c95c3;
+    color: white;
+    border-color: #7aa2f7;
+}
+
+/* Toggle button aligned with navbar */
+.toggle-btn {
+    position: fixed;
+    left: 235px; /* default = sidebar OPEN */
+    top: 80px;
+
+    z-index: 1100;
+
+    background-color: #2c3e50;
+    color: white;
+
+    border: 1px solid #4a5d73;
+    border-radius: 6px;
+
+    padding: 6px 10px;
+    cursor: pointer;
+
+    transition: left 0.3s ease;
+}
+
+/* 👇 When sidebar is collapsed, move button left */
+.sidebar.collapsed ~ .toggle-btn {
+    left: 15px;
+}
+
+/* Adjust main content */
+.test-container {
+    margin-left: 240px;
+    transition: margin-left 0.3s ease;
+}
+
+.test-container.full {
+    margin-left: 0;
+}

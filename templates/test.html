@@ -6,22 +6,38 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+
 </head>
 <body>
-
 
 {% extends "layout.html" %}
 
 {% block title %}Home{% endblock %}
 
 {% block content %}
-    
-<div id="loading-overlay" class="loading-overlay">
-    <div class="spinner"></div>
-    <div class="loading-text">Generating next question...</div>
-</div>
+<!-- SIDEBAR -->
+<div id="sidebar" class="sidebar">
 
-<div class="test-container" data-index="{{ index }}" data-fetched="{{ questions|length }}">
+    <h3>Questions</h3>
+    <div class="question-list">
+        {% for i in range(session.get("total_questions", 10)) %}
+            <a href="{{ url_for('question') }}?go={{ i }}">
+                <button class="q-btn {% if i == index %}active{% endif %}">
+                    Question {{ i + 1 }}
+                </button>
+            </a>
+        {% endfor %}
+    </div>
+</div>
+<button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+
+<div id="mainContainer" class="test-container" data-index="{{ index }}" data-fetched="{{ questions|length }}">
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Generating next question...</div>
+    </div>
 
     <div class="question-box">
         <div class="question-number">
@@ -42,7 +58,6 @@
                     {% set letter = ['A','B','C','D'][loop.index0] %}
                     <label class="answer-row">
                         
-                        <!-- 🔴 Disable input after feedback is shown -->
                         <input 
                             type="radio" 
                             name="answer" 
@@ -54,7 +69,6 @@
                         <span class="custom-radio">{{ letter }}</span>
                         <span class="answer-text">{{ opt }}</span>
         
-                        <!-- 🔴 Highlight correct/wrong AFTER answering -->
                         {% if show_feedback %}
                             {% if letter == q.correct_answer %}
                                 <span style="color: #30ca68;">(Correct Answer)</span>
@@ -67,7 +81,6 @@
                 {% endfor %}
             </div>
         
-            <!-- 🔴 FEEDBACK DISPLAY -->
             {% if show_feedback %}
                 <div class="feedback-box">
                     {% if is_correct %}
@@ -80,19 +93,13 @@
         
             <div class="nav-buttons">
         
-                <!-- 🔴 PRACTICE MODE BUTTON SWITCH -->
             {% if mode == "practice" %}
-
-                    <!-- Skip question -->
-                    <button type="submit" name="direction" value="back" class="dir-btn">Back</button>
-                    {% if not show_feedback %}
-                    <!-- Submit answer -->
-                    <button type="submit" class="dir-btn">Submit</button>
-                    {% endif %}
-                    <button type="submit" name="direction" value="next" class="dir-btn">Next</button>
-            
+                <button type="submit" name="direction" value="back" class="dir-btn">Back</button>
+                {% if not show_feedback %}
+                <button type="submit" class="dir-btn">Submit</button>
+                {% endif %}
+                <button type="submit" name="direction" value="next" class="dir-btn">Next</button>
             {% else %}
-                <!-- TEST MODE -->
                 <button type="submit" name="direction" value="back" class="dir-btn">Back</button>
                 <button type="submit" name="direction" value="next" class="dir-btn">Next</button>
             {% endif %}
@@ -101,7 +108,8 @@
         </form>
     </div>
 </div>
+
 {% endblock %}
-<script src="{{ url_for('static', filename='page1.js') }}"></script>
+
 </body>
 </html>
