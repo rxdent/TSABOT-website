@@ -42,7 +42,44 @@ def generate_question(used_ids, topic_scope=None):
                 elif not topic_scope:
                     valid_ids.append(section["id"])
 
-    test_prompt = f"""..."""  # unchanged
+    test_prompt = f"""You are a Python technical assessment generator.
+{scope_context}
+
+Create ONE multiple-choice question.
+
+Curriculum Data:
+{json.dumps(unit_manager.units_data, indent=2)}
+
+VALID TOPIC IDS TO CHOOSE FROM: {', '.join(valid_ids)}
+
+STRICT RULES:
+1. The 'topic_id' field MUST be chosen ONLY from the VALID TOPIC IDS list above.
+2. Every question must use a unique section ID.
+3. Correct Answer Format: A, B, C, or D. Do NOT include A, B, C, or D in the output, just keep in stored.
+4. 50% concept questions, 50% logic/code questions.
+5. Do NOT reuse used topic IDS: {used_ids}
+6. STRICT DATA SEPARATION:
+In any LOGIC/CODE questions, follow these rules:
+
+   - 'question_text' must ONLY contain the natural language question (e.g., "What is the output of this code?" or "Which choice correctly fills the gap?").
+   - 'code_snippet' must contain ALL code, including variable assignments, function definitions, or logic mentioned in the prompt.
+   - DO NOT describe code inside the text. 
+     BAD: "If x = 10, what is printed?" 
+     GOOD: Text: "What is the output?" | Code: "x = 10\nprint(x)"
+7. Do NOT reuse used topic IDS: {used_ids}
+
+Return JSON ONLY in this format:
+{{
+  "question_number": 1,
+  "topic_id": "...",
+  "question_text": "...",
+  "code_snippet": "x = 5\\nprint(x + 2)",
+  "options": ["...", "...", "...", "..."],
+  "correct_answer": "A"
+}}
+
+Output must be valid JSON. Do not include ```json at the beginning of your line. It must be raw JSON code.
+"""
 
     response = client.chat.completions.parse(
         model="gpt-4o-mini",
@@ -104,19 +141,20 @@ def question():
     if index >= len(questions):
         used_ids = session.get("used_topic_ids", [])
         scope = session.get("test_scope")
-        
-        new_q = generate_question(used_ids, topic_scope=scope)
-        questions.append(new_q)
+
+        while len(questions) <= index:
+            new_q = generate_question(used_ids, topic_scope=scope)
+            questions.append(new_q)
+            used_ids.append(new_q["topic_id"])
+
         session["questions"] = questions
-        
-        used_ids.append(new_q["topic_id"])
         session["used_topic_ids"] = used_ids
         session.modified = True
 
     q = questions[index]
     answers = session.get("answers", {})
     feedback_shown = session.get("feedback_shown", {})
-
+        
     selected = answers.get(str(index))
 
     is_correct = None
@@ -199,6 +237,7 @@ def results():
             "correct_answer": correct,
             "is_correct": is_correct
         })
+        print(results_list)
 
     progress_manager.save()
     total = len(questions)

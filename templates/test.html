@@ -16,7 +16,7 @@
 
 {% block content %}
 <!-- SIDEBAR -->
-<div id="sidebar" class="sidebar">
+<div id="sidebar" class="sidebar collapsed">
 
     <h3>Questions</h3>
     <div class="question-list">
@@ -29,10 +29,11 @@
         {% endfor %}
     </div>
 </div>
+
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
 
-<div id="mainContainer" class="test-container" data-index="{{ index }}" data-fetched="{{ questions|length }}">
+<div id="mainContainer" class="test-container full" data-index="{{ index }}" data-fetched="{{ questions|length }}">
 
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>

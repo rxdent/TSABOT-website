@@ -39,7 +39,14 @@ function triggerLoading(message, url) {
 function toggleSidebar() {
     const sidebar = document.getElementById("sidebar");
     const main = document.getElementById("mainContainer");
+    const btn = document.querySelector(".toggle-btn");
 
+    // Toggle the classes
     sidebar.classList.toggle("collapsed");
     main.classList.toggle("full");
+    
+    // If you are using the 'pushed' class for the button:
+    if (btn) {
+        btn.classList.toggle("pushed");
+    }
 }

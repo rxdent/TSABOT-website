@@ -13,8 +13,8 @@
             "incorrect": 6
         },
         "U1-S1": {
-            "correct": 74,
-            "incorrect": 90
+            "correct": 77,
+            "incorrect": 93
         },
         "U3-S2": {
             "correct": 2,
@@ -79,6 +79,42 @@
         "U5-S5": {
             "correct": 0,
             "incorrect": 1
+        },
+        "math-algebra": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "math": {
+            "correct": 0,
+            "incorrect": 5
+        },
+        "html-css": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "lang001": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "java": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "programming_basics": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "python_basics": {
+            "correct": 0,
+            "incorrect": 1
+        },
+        "basic-programming": {
+            "correct": 0,
+            "incorrect": 2
+        },
+        "CS101": {
+            "correct": 0,
+            "incorrect": 2
         }
     },
     "weak_topics": [
@@ -95,6 +131,15 @@
         "U6-S3",
         "U5-S3",
         "U5-S5",
-        "U1-S3"
+        "U1-S3",
+        "math-algebra",
+        "math",
+        "html-css",
+        "lang001",
+        "java",
+        "programming_basics",
+        "python_basics",
+        "basic-programming",
+        "CS101"
     ]
 }
