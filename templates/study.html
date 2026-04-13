@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+{% block title %}Study Mode{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    {% if view == "main" %}
+        <h1>Study Mode</h1>
+
+        <div class="home-grid">
+            <div class="home-card highlighted-card">
+                <h2>View Study Guide</h2>
+                <p>Browse all units and study anything.</p>
+                <button class="mode-btn" onclick="goToStudyGuide()">Start</button>
+            </div>
+
+            <div class="home-card">
+                <h2>Weak Topics</h2>
+                <p>Focus only on what you're struggling with.</p>
+                <button class="mode-btn" onclick="goToWeakTopics()">Start</button>
+            </div>
+        </div>
+
+    {% else %}
+
+        <h1>Select Topic</h1>
+
+        <div class="selection-container">
+            <label>Choose Unit</label>
+            <select id="unit-select" onchange="populateSections()" class="drop-down">
+                <option value="all">All Units</option>
+                {% for unit in units_data.units %}
+                    <option value="{{ unit.id }}">Unit {{ unit.unit }}: {{ unit.title }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Choose Subunit (Optional)</label>
+            <select id="section-select" class="drop-down">
+                <option value="all">All Sections</option>
+            </select>
+
+            <button class="mode-btn" onclick="startStudy()">Begin Studying</button>
+            <button class="mode-btn full-test-btn" onclick="goToStudyHome()">Back</button>
+        </div>
+
+        <!-- CHAT UI -->
+        <div id="chat-container" class="chat-container hidden">
+            <div class="chat-box" id="chat-box"></div>
+
+            <div class="chat-input-row">
+                <input id="chat-input" placeholder="Ask anything..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+<script>
+// The linter sees a string; Jinja replaces the inside with valid JSON
+    const unitsData = JSON.parse('{{ units_data|tojson | safe }}');</script>
+
+{% endblock %}

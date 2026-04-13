@@ -223,12 +223,10 @@ def results():
         selected = answers.get(str(i))
         correct = q["correct_answer"]
         is_correct = (selected == correct)
-
-        if is_correct:
-            score += 1
-            progress_manager.update(q["topic_id"], True) 
-        else:
-            progress_manager.update(q["topic_id"], False)
+        if mode == "test":
+            if is_correct:
+                score += 1
+            progress_manager.update(q["topic_id"], is_correct)
 
         results_list.append({
             "question": q["question_text"],
@@ -236,10 +234,12 @@ def results():
             "your_answer": selected,
             "correct_answer": correct,
             "is_correct": is_correct
-        })
-        print(results_list)
+            })
+
 
     progress_manager.save()
+
+    #frontend
     total = len(questions)
     percentage = (score / total * 100) if total > 0 else 0
 
@@ -251,6 +251,85 @@ def results():
         results=results_list,
         mode=mode
     )
+
+#--------------STUDY MODE----------------
+
+@app.route("/study")
+def study_home():
+    return render_template(
+        "study.html",
+        units_data=unit_manager.units_data,
+        mode="study",
+        view="main"
+    )
+
+
+@app.route("/study/guide")
+def study_guide():
+    return render_template(
+        "study.html",
+        units_data=unit_manager.units_data,
+        mode="study",
+        view="guide"
+    )
+
+
+@app.route("/study/weak")
+def study_weak():
+    weak_ids = progress_manager.data.get("weak_topics", [])
+
+    # Build filtered units structure
+    filtered_units = {"units": []}
+
+    for unit in unit_manager.units_data["units"]:
+        matching_sections = [
+            s for s in unit["sections"] if s["id"] in weak_ids
+        ]
+
+        if matching_sections:
+            filtered_units["units"].append({
+                "unit": unit["unit"],
+                "title": unit["title"],
+                "id": unit["id"],
+                "sections": matching_sections
+            })
+
+    return render_template(
+        "study.html",
+        units_data=filtered_units,
+        mode="study",
+        view="weak"
+    )
+
+
+@app.route("/study/chat", methods=["POST"])
+def study_chat():
+    user_msg = request.json.get("message")
+    topic = request.json.get("topic")
+
+    system_prompt = f"""
+You are a helpful coding helper.
+
+The student is studying: {topic}
+
+You can:
+- Explain concepts
+- Provide examples
+- Help with studying strategies
+- Answer questions clearly
+
+Keep responses structured and easy to understand.
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_msg}
+        ]
+    )
+
+    return {"response": response.choices[0].message.content}
 
 if __name__ == "__main__":
     app.run(debug=True)
