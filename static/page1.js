@@ -99,11 +99,20 @@ function startStudy() {
     if (section !== "all") topic = section;
     else if (unit !== "all") topic = unit;
 
-    document.getElementById("chat-container").classList.remove("hidden");
+    const chatContainer = document.getElementById("chat-container");
+    const chatBox = document.getElementById("chat-box");
 
-    addMessage("bot", "How may I help you?\n- Explain a topic\n- Give examples\n- Help me study\n- Ask questions");
+    // 🔴 CLEAR OLD CHAT (THIS FIXES YOUR ISSUE)
+    chatBox.innerHTML = "";
 
+    // Show chat UI
+    chatContainer.classList.remove("hidden");
+
+    // Set new topic context
     window.currentTopic = topic;
+
+    // Fresh system message
+    addMessage("bot", "How may I help you?\n- Explain a topic\n- Give examples\n- Help me study\n- Ask questions");
 }
 
 
@@ -142,3 +151,16 @@ function addMessage(sender, text) {
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("chat-input");
+
+    if (input) {
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault(); // prevent newline
+                sendMessage();
+            }
+        });
+    }
+});

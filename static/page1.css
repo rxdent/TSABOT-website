@@ -502,24 +502,37 @@ select:focus {
     background-color: #1e293b;
     border-radius: 10px;
     margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; 
 }
 
+
 .msg {
+    display: inline-block;   /* 🔴 IMPORTANT: prevents full-width stretch */
+    
     margin-bottom: 12px;
     padding: 10px 14px;
     border-radius: 10px;
+
     max-width: 75%;
     line-height: 1.4;
+
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .user-msg {
     background-color: #3a96ff;
     margin-left: auto;
+    display: block; /* 🔴 keeps it on right side */
     text-align: right;
 }
 
 .bot-msg {
     background-color: #4a5d73;
+    display: block;
 }
 
 .chat-input-row {
