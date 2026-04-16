@@ -10,11 +10,23 @@ class UnitManager:
 
     def get_name(self, topic_id):
         for unit in self.units_data["units"]:
-            if unit.get("id") == topic_id:
-                return unit.get("name", topic_id)
+
+            unit_name = f"Unit {unit['unit']}: {unit['title']}"
+
+            if unit["id"] == topic_id:
+                return {
+                    "unit": unit_name,
+                    "section": None
+                }
 
             for sec in unit["sections"]:
                 if sec["id"] == topic_id:
-                    return sec["section"]
+                    return {
+                        "unit": unit_name,
+                        "section": sec["section"]
+                    }
 
-        return topic_id
+        return {
+            "unit": topic_id,
+            "section": None
+        }
