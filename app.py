@@ -2,14 +2,18 @@ from flask import Flask, render_template, request, session, redirect, url_for
 from openai import OpenAI
 from dotenv import load_dotenv
 import os, json
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from core_copy.units import UnitManager
 from core_copy.progress import ProgressManager
 
+#------------------PREBUILT FUNCTIONS---------------------
+
 unit_manager = UnitManager()
 progress_manager = ProgressManager()
+
+#---------------------API STUFF---------------------------
 
 load_dotenv()
 
@@ -18,6 +22,8 @@ app.secret_key = "secret_key"
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+#--------------------------MODELS--------------------------------
+
 class Test_Question(BaseModel):
     question_number: int
     topic_id: str
@@ -25,6 +31,21 @@ class Test_Question(BaseModel):
     code_snippet: Optional[str] = None  
     options: list[str]
     correct_answer: str
+
+class ScopeCheck(BaseModel):
+    related: bool = Field(
+        description="True if the message is about Computer Science OR asking about the current unit/topic"
+    )
+    is_meta: bool = Field(
+        description="True if the user is asking about what the bot does, how to use it, or seeking general help/guidance."
+    )
+    is_summary_request: bool = Field(
+        description="True if the student asks for an overview, an explanation of the topic, or 'What is this unit about?'"
+    )
+
+#-----------------------FUNCTIONS--------------------------
+
+#GENERATE QUESTIONS------------------------------
 
 def generate_question(used_ids, topic_scope=None):
     valid_ids = []
@@ -92,17 +113,77 @@ Output must be valid JSON. Do not include ```json at the beginning of your line.
     
     return json.loads(response.choices[0].message.content)
 
+#CHECK IF USER MESSAGE IS RELATED TO THE TOPIC IN STUDY MODE--------------
+
+def check_if_related(user_message, unit_info):
+    prompt = f"""
+    You are a classification assistant for a TSA Computer Science tutor.
+    CURRENT UNIT: {unit_info["unit"]}
+    CURRENT TOPIC: {unit_info["section"]}
+
+    CLASSIFICATION RULES:
+    1. Set related = true if the user asks about coding OR asks about your capabilities (e.g., "What can you do?").
+    2. Set is_meta = true if they are asking about you, the unit structure, or general help.
+    3. Set is_summary_request = true if they want a broad explanation of the current unit or topic.
+    
+    If they ask about unrelated topics like sports, food, or general chat, set all to False.
+    """
+    
+    response = client.chat.completions.parse(
+        model="gpt-4o-mini",
+        response_format=ScopeCheck,
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    return response.choices[0].message.parsed
+
+#AI RESPONSE TO USER PROMPTS IN STUDY MODE---------------------------
+
+def bot_reply(user_message, unit_info):
+    prompt = f"""
+    You are a TSA study assistant. 
+    CURRENT UNIT: {unit_info["unit"]}
+    CURRENT TOPIC: {unit_info["section"]}
+
+    Rules:
+    - Use bullet points for lists.
+    - No markdown (no bold, no italics).
+    - 2 to 4 sentences max.
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    return response.choices[0].message.content
+
+
+#----------------------FLASK ROUTES--------------------------
+
+#HOME PAGE---------------------
+
 @app.route("/")
 def home():
     return render_template("home.html", mode="home")
+
+#TEST HOME PAGE----------------------------------
 
 @app.route("/test_mode")
 def test_selection():
     return render_template("testmode.html", units_data=unit_manager.units_data, mode="test")
 
+#PRACTICE HOME PAGE------------------------------
+
 @app.route("/practice")
 def practice_selection():
     return render_template("practicetest.html", units_data=unit_manager.units_data, mode="practice")
+
+#CHOOSE A MODE (Test/practice) PAGE ------------------------
 
 @app.route("/test/start/<mode>/<scope>")
 def start_test(mode, scope):
@@ -122,6 +203,8 @@ def start_test(mode, scope):
         session["total_questions"] = 10
         
     return redirect(url_for("question"))
+
+#GENERATE QUESTION PAGE----------------
 
 @app.route("/test/question")
 def question():
@@ -174,6 +257,8 @@ def question():
         is_correct=is_correct
     )
 
+#SHOW ANSWER (if in practice mode) + NAVIGATION SYSTEM------
+
 @app.route("/test/answer", methods=["POST"])
 def answer():
     selected = request.form.get("answer")
@@ -210,6 +295,8 @@ def answer():
         return redirect(url_for("question"))
 
     return redirect(url_for("question"))
+
+#RESULTS PAGE------------------------------
 
 @app.route("/test/results")
 def results():
@@ -252,7 +339,7 @@ def results():
         mode=mode
     )
 
-#--------------STUDY MODE----------------
+#STUDY MODE PAGE-----------------------------
 
 @app.route("/study")
 def study_home():
@@ -274,7 +361,7 @@ def study_guide():
     )
 
 
-@app.route("/study/weak")
+@app.route("/study/weak") #FIX THIS!!!!!!!!!!!
 def study_weak():
     weak_ids = progress_manager.data.get("weak_topics", [])
 
@@ -301,81 +388,26 @@ def study_weak():
         view="weak"
     )
 
+#AI INTERFACE----------------------------------------
 
 @app.route("/study/chat", methods=["POST"])
 def study_chat():
     user_msg = request.json.get("message")
     topic_id = request.json.get("topic")
-    unit_name = unit_manager.get_name(topic_id)
+    unit_info = unit_manager.get_name(topic_id)
 
-    system_prompt = f"""
-    You are a TSA study assistant.
+    check = check_if_related(user_msg, unit_info)
 
-    CURRENT UNIT: {unit_name["unit"]}
-    CURRENT TOPIC : {unit_name["section"]}
+    if not (check.related or check.is_meta):
+        return {"response": "I can't answer that question. What else can I help you with?"}
 
-    CORE RULE:
-    You are ONLY allowed to talk about anything coding related. If the user asks any question that ISN'T Computer Science related, redirect them.
-
-    SCOPE ENFORCEMENT:
-    If the user asks anything not clearly related to the CURRENT TOPIC:
-    - Do NOT answer the question.
-    - Do NOT explain why.
-    - Redirect immediately by asking "I can't answer that question. What else can I help you with?"
-
-    FORMAT RULES:
-    - Do NOT use markdown.
-    - You CAN use bullet points to show lists.
-    - Keep responses between 2 and 4 sentences unless the user asks for more detail.
-
-    CONTENT RULES:
-    - Use simple, clear explanations.
-    - If giving an example, keep it short and directly tied to the CURRENT UNIT and CURRENT TOPIC (if applicable).
-    - Do NOT invent unrelated examples or analogies.
-    - Do NOT generate random names, lists, or unrelated content.
-
-    UNIT NAMING RULE:
-    If referencing a unit, always use the full name.
-    Example: Unit 1.1: Data Types, Variables and Memory
-    Never use abbreviations like U1 or U3-S2.
-
-    TOPIC SUMMARY RULE:
-    If the user asks to explain the topic or unit, respond in this exact structure:
-
-    IF UNIT SELECTED ONLY:
-
-    full unit name
-
-    (unit name) covers (explanation). In this unit, you will learn how to:
-
-    - brief topic explanation 1
-    - brief topic explanation 2
-    etc..
-
-    IF UNIT AND SECTION ARE FILLED:
-
-    full topic name
-
-    (Topic name) covers (explanation)
+    # if check.is_summary_request:
+    #     answer = generate_summary_reply(user_msg, unit_info)
+    else:
+        # Standard coding explanation
+        answer = bot_reply(user_msg, unit_info)
     
-
-    Do NOT add extra sections, lists, or additional topic breakdowns unless explicitly asked.
-
-    FAILSAFE:
-    If you are unsure whether something is related to the CURRENT UNIT AND CURRENT TOPIC, treat it as unrelated and redirect.
-
-    Your goal is to help the student understand the CURRENT TOPIC AND CURRENT TOPIC, clearly and efficiently without going off topic.
-    """
-
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_msg}
-        ]
-    )
-    return {"response": response.choices[0].message.content}
+    return {"response": answer}
 
 if __name__ == "__main__":
     app.run(debug=True)
