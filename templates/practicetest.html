@@ -1,26 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Practice Mode</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
-    
-</head>
-<body>
+{% extends "layout.html" %}
+
+{% block title %}Practice{% endblock %}
+
+{% block content %}
 
 <div id="loading-overlay" class="loading-overlay">
     <div class="spinner"></div>
     <div id="loading-message" class="loading-text">Generating next question...</div>
 </div>
 
-{% extends "layout.html" %}
-
-{% block title %}Home{% endblock %}
-
-{% block content %}
 
 <div class="container">
     <h1 style="margin-bottom: 40px;">PRACTICE MODE</h1>

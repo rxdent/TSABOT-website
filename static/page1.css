@@ -557,3 +557,61 @@ select:focus {
     color: white;
     cursor: pointer;
 }
+
+/* TEST MODE */
+
+
+/* Internal styling for selection controls to match the theme */
+.selection-container {
+    background-color: #2c3e50;
+    padding: 30px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    text-align: left;
+    border: 1px solid #4a5d73;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.selection-container label {
+    display: block;
+    color: #94a3b8;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+select {
+    width: 100%;
+    padding: 12px;
+    background-color: #1f2a3a;
+    color: white;
+    border: 1px solid #4a5d73;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 20px;
+    outline: none;
+}
+select:focus {
+    border-color: #7aa2f7;
+}
+.mode-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #6c95c3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    transition: background 0.3s;
+}
+.mode-btn:hover {
+    background-color: #3a96ff;
+}
+.full-test-btn {
+    background: none;
+    border: 2px solid #6c95c3;
+    color: white;
+}

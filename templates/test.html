@@ -1,18 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Test</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='page1.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Lexend:wght@100..900&display=swap" rel="stylesheet">
-
-</head>
-<body>
-
 {% extends "layout.html" %}
 
-{% block title %}Home{% endblock %}
+{% block title %}
+    {% if mode == "practice" %} 
+        Practice
+    {% elif mode == "test" %}
+        Test
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <!-- SIDEBAR -->

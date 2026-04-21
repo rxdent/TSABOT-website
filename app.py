@@ -232,6 +232,7 @@ def question():
 
         session["questions"] = questions
         session["used_topic_ids"] = used_ids
+        print(used_ids)
         session.modified = True
 
     q = questions[index]
@@ -310,9 +311,9 @@ def results():
         selected = answers.get(str(i))
         correct = q["correct_answer"]
         is_correct = (selected == correct)
-        if mode == "test":
-            if is_correct:
-                score += 1
+
+        if is_correct:
+            score += 1
             progress_manager.update(q["topic_id"], is_correct)
 
         results_list.append({
