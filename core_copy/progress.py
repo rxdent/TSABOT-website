@@ -22,24 +22,37 @@ class ProgressManager:
             json.dump(self.data, f, indent=4)
 
     def update(self, topic_id, is_correct):
+            # 1. Ensure the topic exists in our data dictionary
+            if topic_id not in self.data["topics"]:
+                self.data["topics"][topic_id] = {"correct": 0, "incorrect": 0}
+            
+            stats = self.data["topics"][topic_id]
+            
+            # 2. Update the counts
+            if is_correct: 
+                stats["correct"] += 1
+            else: 
+                stats["incorrect"] += 1
+            
+            # 3. Calculate the new mastery percentage
+            total = stats["correct"] + stats["incorrect"]
+            percentage = (stats["correct"] / total) * 100
+            
+            # 4. Update Weak Topics using set logic for accuracy
+            # We convert to a set temporarily to make adding/removing cleaner
+            weak_set = set(self.data.get("weak_topics", []))
+            
+            if percentage < 70:
+                weak_set.add(topic_id)
+            else:
+                if topic_id in weak_set:
+                    weak_set.remove(topic_id)
 
-        #---------------Create a new topic-----------------------
-        stats = self.data["topics"].setdefault(topic_id, {"correct": 0, "incorrect": 0})
-        
-        #-------------------Update--------------------
-        if is_correct: stats["correct"] += 1
-        else: stats["incorrect"] += 1
-        
-        #-----------------Weak Topics-----------------
-        total = stats["correct"] + stats["incorrect"]
-        percentage = (stats["correct"] / total) * 100
-        
-        if percentage < 70 and topic_id not in self.data["weak_topics"]:
-            self.data["weak_topics"].append(topic_id)
-        elif percentage >= 70 and topic_id in self.data["weak_topics"]:
-            self.data["weak_topics"].remove(topic_id)
+            # Convert back to list for JSON storage
+            self.data["weak_topics"] = list(weak_set)
 
-        self.save()
+            # 5. Save changes immediately
+            self.save()
 
         #--------------Show weak topics-----------------
     def show_weak(self):

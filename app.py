@@ -63,6 +63,7 @@ def generate_question(used_ids, topic_scope=None):
                 elif not topic_scope:
                     valid_ids.append(section["id"])
 
+    # Updated Prompt to handle reusing topics for small units
     test_prompt = f"""You are a Python technical assessment generator.
 {scope_context}
 
@@ -74,20 +75,17 @@ Curriculum Data:
 VALID TOPIC IDS TO CHOOSE FROM: {', '.join(valid_ids)}
 
 STRICT RULES:
-1. The 'topic_id' field MUST be chosen ONLY from the VALID TOPIC IDS list above.
-2. Every question must use a unique section ID.
-3. Correct Answer Format: A, B, C, or D. Do NOT include A, B, C, or D in the output, just keep in stored.
-4. 50% concept questions, 50% logic/code questions.
-5. Do NOT reuse used topic IDS: {used_ids}
+1. The 'topic_id' field MUST be chosen ONLY from the VALID TOPIC IDS list provided above.
+2. PRIORITIZE selecting IDs that are NOT in this list of already used IDs: {used_ids}.
+3. If ALL valid topic IDs have been used, you MAY reuse an ID. However, the 'question_text' and 'code_snippet' must be entirely unique from previous questions.
+4. Correct Answer Format: A, B, C, or D. Do NOT include the letter in the options text.
+5. 50% concept questions, 50% logic/code questions.
 6. STRICT DATA SEPARATION:
-In any LOGIC/CODE questions, follow these rules:
-
-   - 'question_text' must ONLY contain the natural language question (e.g., "What is the output of this code?" or "Which choice correctly fills the gap?").
-   - 'code_snippet' must contain ALL code, including variable assignments, function definitions, or logic mentioned in the prompt.
+   - 'question_text' must ONLY contain the natural language question.
+   - 'code_snippet' must contain ALL code logic, including variables or functions.
    - DO NOT describe code inside the text. 
      BAD: "If x = 10, what is printed?" 
-     GOOD: Text: "What is the output?" | Code: "x = 10\nprint(x)"
-7. Do NOT reuse used topic IDS: {used_ids}
+     GOOD: Text: "What is the output?" | Code: "x = 10\\nprint(x)"
 
 Return JSON ONLY in this format:
 {{
@@ -98,8 +96,6 @@ Return JSON ONLY in this format:
   "options": ["...", "...", "...", "..."],
   "correct_answer": "A"
 }}
-
-Output must be valid JSON. Do not include ```json at the beginning of your line. It must be raw JSON code.
 """
 
     response = client.chat.completions.parse(
@@ -194,6 +190,7 @@ def start_test(mode, scope):
     session["used_topic_ids"] = []
     session["mode"] = mode
     session["test_scope"] = None if scope == "all" else scope
+    session["results_processed"] = False
     
     if "-" in scope:
         session["total_questions"] = 3
@@ -208,43 +205,57 @@ def start_test(mode, scope):
 
 @app.route("/test/question")
 def question():
-    # 🔴 NEW: handle sidebar jump
+    # 1. HANDLE SIDEBAR NAVIGATION
+    # If a user clicks a specific question number in the sidebar, update the current index.
     go_to = request.args.get("go")
     if go_to is not None:
         session["current_question"] = int(go_to)
 
+    # 2. RETRIEVE SESSION STATE
     questions = session.get("questions", [])
     index = session.get("current_question", 0)
     total = session.get("total_questions", 10)
     mode = session.get("mode")
+    scope = session.get("test_scope")
+    used_ids = session.get("used_topic_ids", [])
 
+    # 3. COMPLETION CHECK
+    # If the user has finished all questions, send them to the results page.
     if index >= total:
         return redirect(url_for("results"))
     
+    # 4. DYNAMIC QUESTION GENERATION
+    # If the requested question doesn't exist yet, generate it.
     if index >= len(questions):
-        used_ids = session.get("used_topic_ids", [])
-        scope = session.get("test_scope")
-
+        # We use a while loop to fill up the questions list until it reaches the current index
         while len(questions) <= index:
+            # Call the AI to generate a question based on the scope (Unit/Subunit/All)
             new_q = generate_question(used_ids, topic_scope=scope)
+            
             questions.append(new_q)
+            
+            # Record the topic_id so the AI knows what has been covered.
+            # For Units/Subunits, the AI is allowed to reuse these if valid_ids are exhausted.
             used_ids.append(new_q["topic_id"])
 
+        # Update the session with the new question and the updated list of used topics
         session["questions"] = questions
         session["used_topic_ids"] = used_ids
-        print(used_ids)
         session.modified = True
 
+    # 5. PREPARE DATA FOR THE TEMPLATE
     q = questions[index]
     answers = session.get("answers", {})
     feedback_shown = session.get("feedback_shown", {})
         
+    # Check if the user has already answered this specific question (for 'Back' navigation)
     selected = answers.get(str(index))
 
     is_correct = None
     if selected:
         is_correct = (selected == q["correct_answer"])
 
+    # Determine if feedback (correct/incorrect) should be visible (Practice mode only)
     show_feedback = (mode == "practice" and feedback_shown.get(str(index)))
 
     return render_template(
@@ -257,7 +268,6 @@ def question():
         show_feedback=show_feedback,
         is_correct=is_correct
     )
-
 #SHOW ANSWER (if in practice mode) + NAVIGATION SYSTEM------
 
 @app.route("/test/answer", methods=["POST"])
@@ -307,6 +317,9 @@ def results():
     results_list = []
     score = 0
 
+    # 1. Check if we have already processed these results to prevent duplicates on reload
+    already_processed = session.get("results_processed", False)
+
     for i, q in enumerate(questions):
         selected = answers.get(str(i))
         correct = q["correct_answer"]
@@ -314,6 +327,9 @@ def results():
 
         if is_correct:
             score += 1
+        
+        # 2. Only update the ProgressManager if this is the FIRST time viewing the results
+        if not already_processed:
             progress_manager.update(q["topic_id"], is_correct)
 
         results_list.append({
@@ -322,12 +338,15 @@ def results():
             "your_answer": selected,
             "correct_answer": correct,
             "is_correct": is_correct
-            })
+        })
 
+    # 3. Save the file and mark the session as processed
+    if not already_processed:
+        progress_manager.save()
+        session["results_processed"] = True
+        session.modified = True
 
-    progress_manager.save()
-
-    #frontend
+    # Frontend calculations
     total = len(questions)
     percentage = (score / total * 100) if total > 0 else 0
 
