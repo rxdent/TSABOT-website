@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, session, redirect, url_for
 from openai import OpenAI
 from dotenv import load_dotenv
-import os, json
+import os, json, random
 from pydantic import BaseModel, Field
 from typing import Optional
+
 
 from core_copy.units import UnitManager
 from core_copy.progress import ProgressManager
@@ -47,23 +48,53 @@ class ScopeCheck(BaseModel):
 
 #GENERATE QUESTIONS------------------------------
 
-def generate_question(used_ids, topic_scope=None):
+def generate_question(topic_scope=None):
     valid_ids = []
     scope_context = ""
 
+    # Build list of valid topic IDs based on selected scope
     for unit in unit_manager.units_data["units"]:
+
+        # Entire Unit selected (ex: U1)
         if topic_scope and topic_scope == unit["id"]:
-            valid_ids.extend([s["id"] for s in unit["sections"]])
-            scope_context = f"The student is currently being tested on Unit {unit['unit']}: {unit['title']}."
+            valid_ids.extend([section["id"] for section in unit["sections"]])
+            scope_context = (
+                f"The student is currently being tested on "
+                f"Unit {unit['unit']}: {unit['title']}."
+            )
+
         else:
             for section in unit["sections"]:
+
+                # Single Section selected (ex: U1-S3)
                 if topic_scope and topic_scope == section["id"]:
                     valid_ids.append(section["id"])
-                    scope_context = f"The student is currently being tested on Section: {section['section']}."
+                    scope_context = (
+                        f"The student is currently being tested on "
+                        f"Section {section['section']}."
+                    )
+
+                # Full curriculum selected
                 elif not topic_scope:
                     valid_ids.append(section["id"])
 
-    # Updated Prompt to handle reusing topics for small units
+    # ---------------- TOPIC POOL SYSTEM ----------------
+    # Uses a shuffled pool so each topic appears once
+    # before any repeats happen.
+
+    pool = session.get("topic_pool", [])
+
+    if not pool:
+        pool = valid_ids[:]
+        random.shuffle(pool)
+
+    chosen_topic = pool.pop(0)
+
+    session["topic_pool"] = pool
+    session.modified = True
+
+    # ---------------- PROMPT ----------------
+
     test_prompt = f"""You are a Python technical assessment generator.
 {scope_context}
 
@@ -72,25 +103,34 @@ Create ONE multiple-choice question.
 Curriculum Data:
 {json.dumps(unit_manager.units_data, indent=2)}
 
-VALID TOPIC IDS TO CHOOSE FROM: {', '.join(valid_ids)}
+TOPIC ID FOR THIS QUESTION: {chosen_topic}
 
 STRICT RULES:
-1. The 'topic_id' field MUST be chosen ONLY from the VALID TOPIC IDS list provided above.
-2. PRIORITIZE selecting IDs that are NOT in this list of already used IDs: {used_ids}.
-3. If ALL valid topic IDs have been used, you MAY reuse an ID. However, the 'question_text' and 'code_snippet' must be entirely unique from previous questions.
-4. Correct Answer Format: A, B, C, or D. Do NOT include the letter in the options text.
-5. 50% concept questions, 50% logic/code questions.
-6. STRICT DATA SEPARATION:
-   - 'question_text' must ONLY contain the natural language question.
-   - 'code_snippet' must contain ALL code logic, including variables or functions.
-   - DO NOT describe code inside the text. 
-     BAD: "If x = 10, what is printed?" 
-     GOOD: Text: "What is the output?" | Code: "x = 10\\nprint(x)"
+1. The 'topic_id' field MUST be exactly: {chosen_topic}
+2. Do not use any other topic_id.
+3. Correct Answer Format: A, B, C, or D.
+4. One answer option MUST be the answer.
+5. Do NOT include the letter inside option text.
+6. 50% concept questions, 50% logic/code questions.
+7. Make every question unique.
+8. STRICT DATA SEPARATION:
+   - question_text = natural language only
+   - code_snippet = ALL code only
+   - Do NOT describe code inside question_text
+
+BAD:
+question_text: If x = 5, what prints?
+code_snippet: null
+
+GOOD:
+question_text: What is the output?
+code_snippet: x = 5\\nprint(x)
 
 Return JSON ONLY in this format:
+
 {{
   "question_number": 1,
-  "topic_id": "...",
+  "topic_id": "{chosen_topic}",
   "question_text": "...",
   "code_snippet": "x = 5\\nprint(x + 2)",
   "options": ["...", "...", "...", "..."],
@@ -106,7 +146,7 @@ Return JSON ONLY in this format:
             {"role": "user", "content": "Generate the next question now."}
         ]
     )
-    
+
     return json.loads(response.choices[0].message.content)
 
 #CHECK IF USER MESSAGE IS RELATED TO THE TOPIC IN STUDY MODE--------------
@@ -187,76 +227,71 @@ def start_test(mode, scope):
     session["current_question"] = 0
     session["answers"] = {}
     session["feedback_shown"] = {}
-    session["used_topic_ids"] = []
+
+    session["topic_pool"] = []
+
     session["mode"] = mode
     session["test_scope"] = None if scope == "all" else scope
     session["results_processed"] = False
-    
+
+    # Question count based on scope
     if "-" in scope:
         session["total_questions"] = 3
     elif scope.startswith("U"):
-        session["total_questions"] = 5
+        session["total_questions"] = 10
     else:
         session["total_questions"] = 10
-        
+
+    session.modified = True
+
     return redirect(url_for("question"))
 
 #GENERATE QUESTION PAGE----------------
 
 @app.route("/test/question")
 def question():
-    # 1. HANDLE SIDEBAR NAVIGATION
-    # If a user clicks a specific question number in the sidebar, update the current index.
+    # Sidebar navigation
     go_to = request.args.get("go")
     if go_to is not None:
         session["current_question"] = int(go_to)
 
-    # 2. RETRIEVE SESSION STATE
+    # Session state
     questions = session.get("questions", [])
     index = session.get("current_question", 0)
     total = session.get("total_questions", 10)
     mode = session.get("mode")
     scope = session.get("test_scope")
-    used_ids = session.get("used_topic_ids", [])
 
-    # 3. COMPLETION CHECK
-    # If the user has finished all questions, send them to the results page.
+    # Finished test
     if index >= total:
         return redirect(url_for("results"))
-    
-    # 4. DYNAMIC QUESTION GENERATION
-    # If the requested question doesn't exist yet, generate it.
-    if index >= len(questions):
-        # We use a while loop to fill up the questions list until it reaches the current index
-        while len(questions) <= index:
-            # Call the AI to generate a question based on the scope (Unit/Subunit/All)
-            new_q = generate_question(used_ids, topic_scope=scope)
-            
-            questions.append(new_q)
-            
-            # Record the topic_id so the AI knows what has been covered.
-            # For Units/Subunits, the AI is allowed to reuse these if valid_ids are exhausted.
-            used_ids.append(new_q["topic_id"])
 
-        # Update the session with the new question and the updated list of used topics
+    # Generate missing questions up to current index
+    if index >= len(questions):
+
+        while len(questions) <= index:
+            new_q = generate_question(topic_scope=scope)
+            questions.append(new_q)
+
         session["questions"] = questions
-        session["used_topic_ids"] = used_ids
         session.modified = True
 
-    # 5. PREPARE DATA FOR THE TEMPLATE
+    # Current question
     q = questions[index]
+
     answers = session.get("answers", {})
     feedback_shown = session.get("feedback_shown", {})
-        
-    # Check if the user has already answered this specific question (for 'Back' navigation)
+
     selected = answers.get(str(index))
 
     is_correct = None
     if selected:
         is_correct = (selected == q["correct_answer"])
 
-    # Determine if feedback (correct/incorrect) should be visible (Practice mode only)
-    show_feedback = (mode == "practice" and feedback_shown.get(str(index)))
+    show_feedback = (
+        mode == "practice"
+        and feedback_shown.get(str(index))
+    )
 
     return render_template(
         "test.html",

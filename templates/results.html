@@ -20,6 +20,7 @@
                 {{ 'correct-border' if res.is_correct else ('skipped-border' if is_skipped else 'wrong-border') }}">
                 
                 <div class="result-header">
+                    <h3>Question {{ loop.index }}</h3>
                     <span class="status-badge 
                         {{ 'status-correct' if res.is_correct else ('status-skipped' if is_skipped else 'status-wrong') }}">
                         {% if res.is_correct %}
@@ -30,7 +31,6 @@
                             ✗ Incorrect
                         {% endif %}
                     </span>
-                    <h3>Question {{ loop.index }}</h3>
                 </div>
                 
                 <p class="result-text">{{ res.question }}</p>
