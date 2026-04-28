@@ -20,27 +20,39 @@
 
     {% else %}
 
-        <div class="selection-container">
+    <div class="selection-container">
 
-            <label>Choose Unit</label>
-            <select id="unit-select" onchange="populateSections()" class="drop-down">
-
-                {% for unit in units_data.units %}
-                    <option value="{{ unit.id }}">
-                        Unit {{ unit.unit }}: {{ unit.title }}
+        <label>Choose Unit</label>
+        <select id="unit-select" onchange="populateSections()" class="drop-down">
+    
+            {% for unit in units_data.units %}
+                <option value="{{ unit.id }}">
+                    Unit {{ unit.unit }}: {{ unit.title }}
+                </option>
+            {% endfor %}
+    
+        </select>
+    
+    
+        <label>Choose Weak Section</label>
+        <select id="section-select" class="drop-down">
+    
+            <option value="all">Whole unit</option>
+    
+            {% for unit in units_data["units"] %}
+                {% for section in unit.sections %}
+                    <option value="{{ section.id }}">
+                        {{ section.section }}
                     </option>
                 {% endfor %}
-            </select>
-
-            <label>Choose Weak Section</label>
-            <select id="section-select" class="drop-down">
-                <option value="all">All Weak Sections</option>
-            </select>
-
-            <button class="mode-btn" onclick="startStudy()">Begin Studying</button>
-            <button class="mode-btn full-test-btn" onclick="goToStudyHome()">Back</button>
-
-        </div>
+            {% endfor %}
+    
+        </select>
+    
+        <button class="mode-btn" onclick="startStudy()">Begin Studying</button>
+        <button class="mode-btn full-test-btn" onclick="goToStudyHome()">Back</button>
+    
+    </div>
 
         <!-- CHAT -->
         <div id="chat-container" class="chat-container hidden">

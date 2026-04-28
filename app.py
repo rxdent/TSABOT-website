@@ -93,6 +93,9 @@ def generate_question(topic_scope=None):
     session["topic_pool"] = pool
     session.modified = True
 
+    # print(f"Topic pool: {pool}")
+    # print(f"Chosen topic: {chosen_topic}")
+
     # ---------------- PROMPT ----------------
 
     test_prompt = f"""You are a Python technical assessment generator.
@@ -236,11 +239,11 @@ def start_test(mode, scope):
 
     # Question count based on scope
     if "-" in scope:
-        session["total_questions"] = 3
+        session["total_questions"] = 5
     elif scope.startswith("U"):
         session["total_questions"] = 10
     else:
-        session["total_questions"] = 10
+        session["total_questions"] = 15
 
     session.modified = True
 
@@ -470,6 +473,104 @@ def study_chat():
         answer = bot_reply(user_msg, unit_info)
     
     return {"response": answer}
+
+#PRACTICE AI CHATBOT --------------------------
+
+@app.route("/practice/chat", methods=["POST"])
+def practice_chat():
+    data = request.json or {}
+
+    # Question session key (per-question memory isolation)
+    index = session.get("current_question", 0)
+    key = f"practice_chat_{index}"
+
+    history = session.get(key, [])
+
+    # Incoming payload
+    topic = data.get("topic")
+    question = data.get("question")
+    options = data.get("options", [])
+    selected = data.get("selected")
+    correct = data.get("correct")
+    user_message = data.get("message", "").strip()
+
+    unit_info = unit_manager.get_name(topic)
+
+    # Detect whether this is first interaction or follow-up
+    is_followup = len(history) > 0
+
+    # System prompt (behavior rules only — no forcing output structure)
+    system_prompt = f"""
+You are a CS tutor helping a student review a multiple-choice question.
+
+TOPIC: {unit_info.get("section")}
+
+QUESTION:
+{question}
+
+OPTIONS:
+A. {options[0] if len(options) > 0 else ""}
+B. {options[1] if len(options) > 1 else ""}
+C. {options[2] if len(options) > 2 else ""}
+D. {options[3] if len(options) > 3 else ""}
+
+Correct answer: {correct}
+Student selected: {selected}
+
+Core behavior rules:
+- If this is the FIRST response to the question:
+  - State if the student is correct or incorrect
+  - Briefly explain why
+  - Briefly explain the correct answer
+
+- If this is a FOLLOW-UP question:
+  - Do NOT repeat full explanation or re-evaluate correctness
+  - Answer ONLY the student's question
+  - Use the MCQ only as reference if needed
+
+- Be concise and clear.
+"""
+
+    # Initialize or append user message
+    if not user_message:
+        # fallback initial trigger
+        user_message = "Explain this question and my answer."
+
+    history.append({
+        "role": "user",
+        "content": user_message
+    })
+
+    # Build messages
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Add light mode signal for follow-ups (helps a lot)
+    if is_followup:
+        messages.append({
+            "role": "system",
+            "content": "User is asking a follow-up question. Do not repeat full explanation unless explicitly asked."
+        })
+
+    messages.extend(history)
+
+    # Call model
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages
+    )
+
+    reply = response.choices[0].message.content
+
+    # Save assistant response
+    history.append({
+        "role": "assistant",
+        "content": reply
+    })
+
+    session[key] = history
+    session.modified = True
+
+    return {"response": reply}
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -27,7 +27,13 @@
 <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
 
-<div id="mainContainer" class="test-container full" data-index="{{ index }}" data-fetched="{{ questions|length }}">
+<div id="mainContainer" class="test-container full"
+     data-index="{{ index }}"
+     data-fetched="{{ questions|length }}"
+     data-topic="{{ q.topic_id }}"
+     data-question="{{ q.question_text }}"
+     data-options='{{ q.options|tojson }}'
+     data-correct="{{ q.correct_answer }}">
 
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
@@ -91,7 +97,7 @@
             {% if mode == "practice" %}
                 <button type="submit" name="direction" value="back" class="dir-btn">Back</button>
                 {% if not show_feedback %}
-                <button type="submit" class="dir-btn">Submit</button>
+                <button type="button" class="dir-btn" onclick="submitPracticeAnswer()">Submit</button>
                 {% endif %}
                 <button type="submit" name="direction" value="next" class="dir-btn">Next</button>
             {% else %}
@@ -101,6 +107,22 @@
         
             </div>
         </form>
+
+        <div id="practice-chat-modal" class="chat-modal hidden">
+            <div class="chat-window">
+                <div class="chat-header">
+                    <span>AI Review</span>
+                    <button type="button" onclick="closePracticeChat()">✕</button>
+                </div>
+        
+                <div id="practice-chat-box" class="chat-body"></div>
+        
+                <div class="chat-input-row">
+                    <input type="text" id="practice-chat-input" placeholder="Ask follow-up questions...">
+                    <button type="button" onclick="sendPracticeMessage()">Send</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -615,3 +615,95 @@ select:focus {
     border: 2px solid #6c95c3;
     color: white;
 }
+
+/* PRACTICE AI CHATBOT */
+
+.chat-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.72);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+}
+
+.chat-window {
+    width: 720px;
+    max-width: 95%;
+    background: #2c3e50;
+    border-radius: 18px;
+    padding: 20px;
+    border: 1px solid #4a5d73;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.chat-header button {
+    background: transparent;
+    color: #cbd5e1;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.chat-header button:hover {
+    color: white;
+}
+
+.chat-body {
+    height: 420px;
+    overflow-y: auto;
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 15px;
+}
+
+.chat-body .msg {
+    margin-bottom: 12px;
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input-row input {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: #1f2a3a;
+    color: white;
+}
+
+.chat-input-row button {
+    width: 110px;
+    border: none;
+    border-radius: 10px;
+    background: #3a96ff;
+    color: white;
+    cursor: pointer;
+}
+
+.chat-input-row button:hover {
+    background: #267fe4;
+}
+
+.thinking-msg {
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.hidden {
+    display: none;
+}

@@ -72,9 +72,21 @@ function populateSections() {
     const unitId = document.getElementById("unit-select").value;
     const sectionSelect = document.getElementById("section-select");
 
-    sectionSelect.innerHTML = '<option value="all">All Sections</option>';
+    sectionSelect.innerHTML =
+        '<option value="all">All Weak Sections</option>';
 
-    if (unitId === "all") return;
+    if (unitId === "all") {
+        unitsData.units.forEach(unit => {
+            unit.sections.forEach(sec => {
+                const opt = document.createElement("option");
+                opt.value = sec.id;
+                opt.textContent =
+                    `Unit ${unit.unit} - ${sec.section}`;
+                sectionSelect.appendChild(opt);
+            });
+        });
+        return;
+    }
 
     const unit = unitsData.units.find(u => u.id === unitId);
 
@@ -87,7 +99,6 @@ function populateSections() {
         sectionSelect.appendChild(opt);
     });
 }
-
 
 // Start study → show chatbot
 function startStudy() {
@@ -161,6 +172,161 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault(); // prevent newline
                 sendMessage();
+            }
+        });
+    }
+});
+
+// PRACTICE AI CHATBOT
+let practiceHistory = [];
+let waitingForReply = false;
+
+function submitPracticeAnswer() {
+    const selected = document.querySelector('input[name="answer"]:checked');
+
+    if (!selected) {
+        alert("Select an answer first.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("answer", selected.value);
+
+    fetch("/test/answer", {
+        method: "POST",
+        body: formData
+    }).then(() => {
+        openPracticeChat(selected.value);
+    });
+}
+
+function openPracticeChat(selectedLetter) {
+    const container = document.getElementById("mainContainer");
+
+    document.getElementById("practice-chat-modal").classList.remove("hidden");
+    document.getElementById("practice-chat-box").innerHTML = "";
+
+    practiceHistory = [];
+
+    requestPracticeReply(selectedLetter, []);
+}
+
+function requestPracticeReply(selectedLetter, history) {
+    const container = document.getElementById("mainContainer");
+
+    showThinking();
+
+    fetch("/practice/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            topic: container.dataset.topic,
+            question: container.dataset.question,
+            options: JSON.parse(container.dataset.options),
+            selected: selectedLetter,
+            correct: container.dataset.correct,
+            history: history
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        removeThinking();
+        typeBotMessage(data.response);
+
+        practiceHistory.push({
+            role: "assistant",
+            content: data.response
+        });
+    });
+}
+
+function sendPracticeMessage() {
+    if (waitingForReply) return;
+
+    const input = document.getElementById("practice-chat-input");
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    addPracticeMessage("user", text);
+
+    practiceHistory.push({
+        role: "user",
+        content: text
+    });
+
+    input.value = "";
+
+    const selected = document.querySelector('input[name="answer"]:checked').value;
+
+    requestPracticeReply(selected, practiceHistory);
+}
+
+function addPracticeMessage(sender, text) {
+    const box = document.getElementById("practice-chat-box");
+
+    const div = document.createElement("div");
+    div.className = sender === "user" ? "msg user-msg" : "msg bot-msg";
+    div.innerText = text;
+
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function typeBotMessage(text) {
+    waitingForReply = true;
+
+    const box = document.getElementById("practice-chat-box");
+    const div = document.createElement("div");
+
+    div.className = "msg bot-msg";
+    box.appendChild(div);
+
+    let i = 0;
+
+    const interval = setInterval(() => {
+        div.innerText = text.slice(0, i);
+        box.scrollTop = box.scrollHeight;
+        i++;
+
+        if (i > text.length) {
+            clearInterval(interval);
+            waitingForReply = false;
+        }
+    }, 14);
+}
+
+function showThinking() {
+    const box = document.getElementById("practice-chat-box");
+
+    const div = document.createElement("div");
+    div.className = "msg bot-msg thinking-msg";
+    div.id = "thinking-msg";
+    div.innerText = "Thinking...";
+
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function removeThinking() {
+    const thinking = document.getElementById("thinking-msg");
+    if (thinking) thinking.remove();
+}
+
+function closePracticeChat() {
+    document.getElementById("practice-chat-modal").classList.add("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("practice-chat-input");
+
+    if (input) {
+        input.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendPracticeMessage();
             }
         });
     }

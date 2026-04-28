@@ -1,8 +1,8 @@
 {
     "topics": {
         "U1-S1": {
-            "correct": 1,
-            "incorrect": 2
+            "correct": 17,
+            "incorrect": 11
         }
     },
     "weak_topics": [
