@@ -94,25 +94,26 @@ function startStudy() {
     const unit = document.getElementById("unit-select").value;
     const section = document.getElementById("section-select").value;
 
-    let topic = "All Topics";
+    let topic = "all";
 
-    if (section !== "all") topic = section;
-    else if (unit !== "all") topic = unit;
+    if (section !== "all") {
+        topic = section;
+    } else if (unit !== "all") {
+        topic = unit;
+    }
 
     const chatContainer = document.getElementById("chat-container");
     const chatBox = document.getElementById("chat-box");
 
-    // 🔴 CLEAR OLD CHAT (THIS FIXES YOUR ISSUE)
     chatBox.innerHTML = "";
 
-    // Show chat UI
     chatContainer.classList.remove("hidden");
 
-    // Set new topic context
     window.currentTopic = topic;
 
-    // Fresh system message
-    addMessage("bot", "How may I help you?\n- Explain a topic\n- Give examples\n- Help me study\n- Ask questions");
+    addMessage("bot",
+        "How may I help you?\n- Explain a weak topic\n- Give examples\n- Quiz me\n- Help me improve"
+    );
 }
 
 

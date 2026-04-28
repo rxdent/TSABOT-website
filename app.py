@@ -417,6 +417,7 @@ def study_guide():
 
 
 @app.route("/study/weak") #FIX THIS!!!!!!!!!!!
+
 def study_weak():
     weak_ids = progress_manager.data.get("weak_topics", [])
 
@@ -437,7 +438,7 @@ def study_weak():
             })
 
     return render_template(
-        "study.html",
+        "weak.html",
         units_data=filtered_units,
         mode="study",
         view="weak"
@@ -449,7 +450,13 @@ def study_weak():
 def study_chat():
     user_msg = request.json.get("message")
     topic_id = request.json.get("topic")
-    unit_info = unit_manager.get_name(topic_id)
+    if topic_id == "all":
+        unit_info = {
+            "unit": "General Computer Science",
+            "section": "All Weak Topics"
+        }
+    else:
+        unit_info = unit_manager.get_name(topic_id)
 
     check = check_if_related(user_msg, unit_info)
 

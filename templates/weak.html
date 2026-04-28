@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+{% block title %}Weak Topics{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <h1>WEAK TOPICS</h1>
+
+    <p class="hero-subtitle">
+        Focus on the topics you miss most often.
+    </p>
+
+    {% if not units_data["units"] %}
+
+        <div class="selection-container">
+            <h2>No Weak Topics Yet</h2>
+            <p>Complete practice tests first so we can detect weak areas.</p>
+            <button class="mode-btn full-test-btn" onclick="goToStudyHome()">Back</button>
+        </div>
+
+    {% else %}
+
+        <div class="selection-container">
+
+            <label>Choose Unit</label>
+            <select id="unit-select" onchange="populateSections()" class="drop-down">
+
+                {% for unit in units_data.units %}
+                    <option value="{{ unit.id }}">
+                        Unit {{ unit.unit }}: {{ unit.title }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>Choose Weak Section</label>
+            <select id="section-select" class="drop-down">
+                <option value="all">All Weak Sections</option>
+            </select>
+
+            <button class="mode-btn" onclick="startStudy()">Begin Studying</button>
+            <button class="mode-btn full-test-btn" onclick="goToStudyHome()">Back</button>
+
+        </div>
+
+        <!-- CHAT -->
+        <div id="chat-container" class="chat-container hidden">
+            <div class="chat-box" id="chat-box"></div>
+
+            <div class="chat-input-row">
+                <input id="chat-input" placeholder="Ask anything..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+<script>
+const unitsData = JSON.parse('{{ units_data|tojson | safe }}');
+</script>
+
+{% endblock %}
