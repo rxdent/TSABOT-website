@@ -73,7 +73,7 @@ function populateSections() {
     const sectionSelect = document.getElementById("section-select");
 
     sectionSelect.innerHTML =
-        '<option value="all">All Weak Sections</option>';
+        '<option value="all">Whole unit</option>';
 
     if (unitId === "all") {
         unitsData.units.forEach(unit => {
@@ -178,6 +178,21 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // PRACTICE AI CHATBOT
+
+function showCorrectFeedback() {
+    const oldBox = document.getElementById("practice-feedback");
+
+    if (oldBox) oldBox.remove();
+
+    const box = document.createElement("div");
+    box.id = "practice-feedback";
+    box.className = "feedback-box";
+    box.innerHTML = `<p style="color:#4ade80;">Correct!</p>`;
+
+    document.querySelector(".nav-buttons")
+        .before(box);
+}
+
 let practiceHistory = [];
 let waitingForReply = false;
 
@@ -189,21 +204,40 @@ function submitPracticeAnswer() {
         return;
     }
 
+    const chosen = selected.value;
+
+    const container = document.getElementById("mainContainer");
+    const correct = container.dataset.correct;
+
     const formData = new FormData();
-    formData.append("answer", selected.value);
+    formData.append("answer", chosen);
 
     fetch("/test/answer", {
         method: "POST",
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        },
         body: formData
-    }).then(() => {
-        openPracticeChat(selected.value);
-    });
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if (chosen === correct) {
+            showCorrectFeedback();
+        } else {
+            openPracticeChat(chosen);
+        }
+
+    })
+    .catch(err => console.error(err));
 }
 
-function openPracticeChat(selectedLetter) {
-    const container = document.getElementById("mainContainer");
 
-    document.getElementById("practice-chat-modal").classList.remove("hidden");
+function openPracticeChat(selectedLetter) {
+    document
+        .getElementById("practice-chat-modal")
+        .classList.remove("hidden");
+
     document.getElementById("practice-chat-box").innerHTML = "";
 
     practiceHistory = [];

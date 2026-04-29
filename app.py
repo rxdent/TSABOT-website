@@ -52,10 +52,8 @@ def generate_question(topic_scope=None):
     valid_ids = []
     scope_context = ""
 
-    # Build list of valid topic IDs based on selected scope
     for unit in unit_manager.units_data["units"]:
 
-        # Entire Unit selected (ex: U1)
         if topic_scope and topic_scope == unit["id"]:
             valid_ids.extend([section["id"] for section in unit["sections"]])
             scope_context = (
@@ -66,7 +64,6 @@ def generate_question(topic_scope=None):
         else:
             for section in unit["sections"]:
 
-                # Single Section selected (ex: U1-S3)
                 if topic_scope and topic_scope == section["id"]:
                     valid_ids.append(section["id"])
                     scope_context = (
@@ -74,13 +71,8 @@ def generate_question(topic_scope=None):
                         f"Section {section['section']}."
                     )
 
-                # Full curriculum selected
                 elif not topic_scope:
                     valid_ids.append(section["id"])
-
-    # ---------------- TOPIC POOL SYSTEM ----------------
-    # Uses a shuffled pool so each topic appears once
-    # before any repeats happen.
 
     pool = session.get("topic_pool", [])
 
@@ -92,11 +84,6 @@ def generate_question(topic_scope=None):
 
     session["topic_pool"] = pool
     session.modified = True
-
-    # print(f"Topic pool: {pool}")
-    # print(f"Chosen topic: {chosen_topic}")
-
-    # ---------------- PROMPT ----------------
 
     test_prompt = f"""You are a Python technical assessment generator.
 {scope_context}
@@ -120,14 +107,6 @@ STRICT RULES:
    - question_text = natural language only
    - code_snippet = ALL code only
    - Do NOT describe code inside question_text
-
-BAD:
-question_text: If x = 5, what prints?
-code_snippet: null
-
-GOOD:
-question_text: What is the output?
-code_snippet: x = 5\\nprint(x)
 
 Return JSON ONLY in this format:
 
@@ -161,13 +140,14 @@ def check_if_related(user_message, unit_info):
     CURRENT TOPIC: {unit_info["section"]}
 
     CLASSIFICATION RULES:
-    1. Set related = true if the user asks about coding OR asks about your capabilities (e.g., "What can you do?").
+    1. Set related = true if the user asks about coding OR asks about your capabilities.
     2. Set is_meta = true if they are asking about you, the unit structure, or general help.
     3. Set is_summary_request = true if they want a broad explanation of the current unit or topic.
-    
-    If they ask about unrelated topics like sports, food, or general chat, set all to False.
+    4. Follow-up messages like "why?", "how?", "explain more", "what about that?" should be related = true.
+
+    If unrelated topics like sports, food, or random chat, set all to False.
     """
-    
+
     response = client.chat.completions.parse(
         model="gpt-4o-mini",
         response_format=ScopeCheck,
@@ -180,49 +160,60 @@ def check_if_related(user_message, unit_info):
 
 #AI RESPONSE TO USER PROMPTS IN STUDY MODE---------------------------
 
-def bot_reply(user_message, unit_info):
+def bot_reply(user_message, unit_info, history):
     prompt = f"""
-    You are a TSA study assistant. 
+    You are Cobot, a friendly coding tutor and study assistant.
+
+    Audience:
+    - Middle school to high school students
+    - Beginner to intermediate level in computer science
+
+    Role:
+    - You are a coding assistant that helps students understand programming and CS concepts clearly.
+    - Your goal is to teach, not just give answers.
+
+    Current context:
     CURRENT UNIT: {unit_info["unit"]}
     CURRENT TOPIC: {unit_info["section"]}
 
-    Rules:
-    - Use bullet points for lists.
-    - No markdown (no bold, no italics).
-    - 2 to 4 sentences max.
+    Response rules:
+    - Keep answers concise and easy to understand
+    - 2 to 4 sentences max unless the user clearly needs more explanation
+    - DO NOT use markdown.
+    - Only use simple bullet points for lists if required.
+    - ONLY IF THE USER IS CONFUSED, explain using real-world examples. Otherwise, use regular Computer Science jargon.
+    - Use prior messages for context when helpful
+    - Be clear, patient, and structured in explanations
+
     """
+
+    messages = [{"role": "system", "content": prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": user_message})
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_message}
-        ]
+        messages=messages
     )
+
     return response.choices[0].message.content
 
 
 #----------------------FLASK ROUTES--------------------------
 
-#HOME PAGE---------------------
-
 @app.route("/")
 def home():
     return render_template("home.html", mode="home")
-
-#TEST HOME PAGE----------------------------------
 
 @app.route("/test_mode")
 def test_selection():
     return render_template("testmode.html", units_data=unit_manager.units_data, mode="test")
 
-#PRACTICE HOME PAGE------------------------------
-
 @app.route("/practice")
 def practice_selection():
     return render_template("practicetest.html", units_data=unit_manager.units_data, mode="practice")
 
-#CHOOSE A MODE (Test/practice) PAGE ------------------------
+#CHECKS FOR SCOPE OF TEST---------------------------------
 
 @app.route("/test/start/<mode>/<scope>")
 def start_test(mode, scope):
@@ -230,14 +221,12 @@ def start_test(mode, scope):
     session["current_question"] = 0
     session["answers"] = {}
     session["feedback_shown"] = {}
-
     session["topic_pool"] = []
 
     session["mode"] = mode
     session["test_scope"] = None if scope == "all" else scope
     session["results_processed"] = False
 
-    # Question count based on scope
     if "-" in scope:
         session["total_questions"] = 5
     elif scope.startswith("U"):
@@ -249,29 +238,24 @@ def start_test(mode, scope):
 
     return redirect(url_for("question"))
 
-#GENERATE QUESTION PAGE----------------
+#REDIRECT TO NEW QUESTION-------------------------------
 
 @app.route("/test/question")
 def question():
-    # Sidebar navigation
     go_to = request.args.get("go")
     if go_to is not None:
         session["current_question"] = int(go_to)
 
-    # Session state
     questions = session.get("questions", [])
     index = session.get("current_question", 0)
     total = session.get("total_questions", 10)
     mode = session.get("mode")
     scope = session.get("test_scope")
 
-    # Finished test
     if index >= total:
         return redirect(url_for("results"))
 
-    # Generate missing questions up to current index
     if index >= len(questions):
-
         while len(questions) <= index:
             new_q = generate_question(topic_scope=scope)
             questions.append(new_q)
@@ -279,7 +263,6 @@ def question():
         session["questions"] = questions
         session.modified = True
 
-    # Current question
     q = questions[index]
 
     answers = session.get("answers", {})
@@ -306,7 +289,8 @@ def question():
         show_feedback=show_feedback,
         is_correct=is_correct
     )
-#SHOW ANSWER (if in practice mode) + NAVIGATION SYSTEM------
+
+#SHOW ANSWER FEATURE + NAVIGATION---------------------------
 
 @app.route("/test/answer", methods=["POST"])
 def answer():
@@ -314,6 +298,8 @@ def answer():
     direction = request.form.get("direction")
     index = session["current_question"]
     mode = session.get("mode")
+
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
     answers = session.get("answers", {})
     feedback_shown = session.get("feedback_shown", {})
@@ -331,6 +317,10 @@ def answer():
         return redirect(url_for("question"))
 
     if mode == "practice":
+
+        if is_ajax:
+            return {"success": True}
+
         if not feedback_shown.get(str(index)):
             feedback_shown[str(index)] = True
             session["feedback_shown"] = feedback_shown
@@ -345,7 +335,7 @@ def answer():
 
     return redirect(url_for("question"))
 
-#RESULTS PAGE------------------------------
+#RESULTS PAGE----------------------------------------
 
 @app.route("/test/results")
 def results():
@@ -355,7 +345,6 @@ def results():
     results_list = []
     score = 0
 
-    # 1. Check if we have already processed these results to prevent duplicates on reload
     already_processed = session.get("results_processed", False)
 
     for i, q in enumerate(questions):
@@ -365,8 +354,7 @@ def results():
 
         if is_correct:
             score += 1
-        
-        # 2. Only update the ProgressManager if this is the FIRST time viewing the results
+
         if not already_processed:
             progress_manager.update(q["topic_id"], is_correct)
 
@@ -378,26 +366,24 @@ def results():
             "is_correct": is_correct
         })
 
-    # 3. Save the file and mark the session as processed
     if not already_processed:
         progress_manager.save()
         session["results_processed"] = True
         session.modified = True
 
-    # Frontend calculations
     total = len(questions)
     percentage = (score / total * 100) if total > 0 else 0
 
     return render_template(
-        "results.html", 
-        score=score, 
-        total=total, 
-        percentage=percentage, 
+        "results.html",
+        score=score,
+        total=total,
+        percentage=percentage,
         results=results_list,
         mode=mode
     )
+#STUDY PAGE----------------------------------------
 
-#STUDY MODE PAGE-----------------------------
 
 @app.route("/study")
 def study_home():
@@ -408,7 +394,6 @@ def study_home():
         view="main"
     )
 
-
 @app.route("/study/guide")
 def study_guide():
     return render_template(
@@ -418,13 +403,12 @@ def study_guide():
         view="guide"
     )
 
+#WEAK TOPICS----------------------------------------
 
-@app.route("/study/weak") #FIX THIS!!!!!!!!!!!
-
+@app.route("/study/weak")
 def study_weak():
     weak_ids = progress_manager.data.get("weak_topics", [])
 
-    # Build filtered units structure
     filtered_units = {"units": []}
 
     for unit in unit_manager.units_data["units"]:
@@ -447,12 +431,13 @@ def study_weak():
         view="weak"
     )
 
-#AI INTERFACE----------------------------------------
+#STUDY MODE AI INTERFACE-------------------------------------
 
 @app.route("/study/chat", methods=["POST"])
 def study_chat():
     user_msg = request.json.get("message")
     topic_id = request.json.get("topic")
+
     if topic_id == "all":
         unit_info = {
             "unit": "General Computer Science",
@@ -461,17 +446,25 @@ def study_chat():
     else:
         unit_info = unit_manager.get_name(topic_id)
 
+    if session.get("study_topic") != topic_id:
+        session["study_topic"] = topic_id
+        session["study_history"] = []
+
+    history = session.get("study_history", [])
+
     check = check_if_related(user_msg, unit_info)
 
     if not (check.related or check.is_meta):
         return {"response": "I can't answer that question. What else can I help you with?"}
 
-    # if check.is_summary_request:
-    #     answer = generate_summary_reply(user_msg, unit_info)
-    else:
-        # Standard coding explanation
-        answer = bot_reply(user_msg, unit_info)
-    
+    answer = bot_reply(user_msg, unit_info, history)
+
+    history.append({"role": "user", "content": user_msg})
+    history.append({"role": "assistant", "content": answer})
+
+    session["study_history"] = history[-10:]
+    session.modified = True
+
     return {"response": answer}
 
 #PRACTICE AI CHATBOT --------------------------
@@ -480,92 +473,87 @@ def study_chat():
 def practice_chat():
     data = request.json or {}
 
-    # Question session key (per-question memory isolation)
     index = session.get("current_question", 0)
     key = f"practice_chat_{index}"
 
     history = session.get(key, [])
 
-    # Incoming payload
     topic = data.get("topic")
-    question = data.get("question")
+    question = data.get("question", "")
     options = data.get("options", [])
     selected = data.get("selected")
     correct = data.get("correct")
-    user_message = data.get("message", "").strip()
+    user_message = (data.get("message") or "").strip()
 
-    unit_info = unit_manager.get_name(topic)
+    unit_info = unit_manager.get_name(topic) or {}
+    section_name = unit_info.get("section", "Unknown Topic")
 
-    # Detect whether this is first interaction or follow-up
     is_followup = len(history) > 0
 
-    # System prompt (behavior rules only — no forcing output structure)
-    system_prompt = f"""
-You are a CS tutor helping a student review a multiple-choice question.
+    # Default user intent if empty
+    if not user_message:
+        user_message = "Explain why my answer is correct or incorrect."
 
-TOPIC: {unit_info.get("section")}
+    system_prompt = (
+        """You are Cobot, a coding and computer science study assistant.
+        Your job is to help students understand mistakes in multiple-choice questions.
 
-QUESTION:
+        STRICT BEHAVIOR RULES:
+        1. Do NOT reveal the correct answer unless the user explicitly asks for it.
+        2. Your primary goal is explanation, not answer-giving.
+        3. Be concise, clear, and beginner-friendly.
+        4. Maintain a friendly but professional tone.
+        5. If the student is wrong, explain why their choice is incorrect.
+        6. Do not explain any other answer options unless prompted.
+        7. On follow-up questions, answer ONLY the question asked—do not re-explain everything.
+        
+        FORMATTING RULE: DO NOT use markdown in your responses.
+        """
+        
+    )
+
+    context_block = {
+        "role": "system",
+        "content": f"""
+CONTEXT:
+
+Topic: {section_name}
+
+Question:
 {question}
 
-OPTIONS:
+Options:
 A. {options[0] if len(options) > 0 else ""}
 B. {options[1] if len(options) > 1 else ""}
 C. {options[2] if len(options) > 2 else ""}
 D. {options[3] if len(options) > 3 else ""}
 
-Correct answer: {correct}
 Student selected: {selected}
-
-Core behavior rules:
-- If this is the FIRST response to the question:
-  - State if the student is correct or incorrect
-  - Briefly explain why
-  - Briefly explain the correct answer
-
-- If this is a FOLLOW-UP question:
-  - Do NOT repeat full explanation or re-evaluate correctness
-  - Answer ONLY the student's question
-  - Use the MCQ only as reference if needed
-
-- Be concise and clear.
+Correct answer: {correct}
 """
+    }
 
-    # Initialize or append user message
-    if not user_message:
-        # fallback initial trigger
-        user_message = "Explain this question and my answer."
-
-    history.append({
-        "role": "user",
-        "content": user_message
-    })
-
-    # Build messages
     messages = [{"role": "system", "content": system_prompt}]
+    messages.append(context_block)
 
-    # Add light mode signal for follow-ups (helps a lot)
+    # Add prior conversation only if it exists
     if is_followup:
-        messages.append({
-            "role": "system",
-            "content": "User is asking a follow-up question. Do not repeat full explanation unless explicitly asked."
-        })
+        messages.extend(history)
 
-    messages.extend(history)
+    # Add latest user input
+    messages.append({"role": "user", "content": user_message})
 
-    # Call model
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=messages
+        messages=messages,
+        temperature=0.4
     )
 
     reply = response.choices[0].message.content
 
-    # Save assistant response
-    history.append({
-        "role": "assistant",
-        "content": reply
-    })
+    # Update history
+    history.append({"role": "user", "content": user_message})
+    history.append({"role": "assistant", "content": reply})
 
     session[key] = history
     session.modified = True
